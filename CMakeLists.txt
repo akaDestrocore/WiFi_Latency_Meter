@@ -28,37 +28,39 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(WiFi_Latency_Meter2 C CXX ASM)
+project(WiFi_Latency_Meter C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(WiFi_Latency_Meter2 main.c )
+add_executable(WiFi_Latency_Meter 
+        src/main.c
+)
 
-pico_set_program_name(WiFi_Latency_Meter2 "WiFi_Latency_Meter2")
-pico_set_program_version(WiFi_Latency_Meter2 "0.1")
+pico_set_program_name(WiFi_Latency_Meter "WiFi_Latency_Meter")
+pico_set_program_version(WiFi_Latency_Meter "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(WiFi_Latency_Meter2 0)
-pico_enable_stdio_usb(WiFi_Latency_Meter2 0)
+pico_enable_stdio_uart(WiFi_Latency_Meter 0)
+pico_enable_stdio_usb(WiFi_Latency_Meter 1)
 
 # Add the standard library to the build
-target_link_libraries(WiFi_Latency_Meter2
+target_link_libraries(WiFi_Latency_Meter
         pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(WiFi_Latency_Meter2 PRIVATE
+target_include_directories(WiFi_Latency_Meter PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
 
 # Add any user requested libraries
-target_link_libraries(WiFi_Latency_Meter2 
-        
-        )
+target_link_libraries(WiFi_Latency_Meter 
+        pico_cyw43_arch_lwip_threadsafe_background
+)
 
-pico_add_extra_outputs(WiFi_Latency_Meter2)
+pico_add_extra_outputs(WiFi_Latency_Meter)
 
 add_custom_target(copy-uf2
     COMMAND ${CMAKE_COMMAND} -E copy
