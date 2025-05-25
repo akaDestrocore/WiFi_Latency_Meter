@@ -57,7 +57,7 @@
         {
             "label": "Clean Rebuild and Copy UF2 to BOOTSEL",
             "type": "shell",
-            "command": "rm -rf build && mkdir build && cmake -S . -B build && cmake --build build && ~/mount_rpi.sh && cp build/Wireless_Latency_Meter.uf2 /mnt/rpi-rp2/",
+            "command": "rm -rf build && mkdir build && cmake -S . -B build && cmake --build build && ~/mount_rpi.sh && cp build/WiFi_Latency_Meter.uf2 /mnt/rpi-rp2/",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
