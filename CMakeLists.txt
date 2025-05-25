@@ -60,3 +60,10 @@ target_link_libraries(WiFi_Latency_Meter2
 
 pico_add_extra_outputs(WiFi_Latency_Meter2)
 
+add_custom_target(copy-uf2
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.uf2
+        /mnt/rpi-rp2/
+    DEPENDS ${PROJECT_NAME}.uf2
+    COMMENT "Copying UF2 to /mnt/rpi-rp2"
+)
