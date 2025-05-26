@@ -13,7 +13,6 @@
 #include <stdio.h>
 
 #define MAX_PING_COUNT       5
-#define PING_TIMEOUT_MS     2000
 
 typedef struct __attribute__((packed)) {
     uint8_t type;        // ICMP type
