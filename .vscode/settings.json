@@ -35,5 +35,13 @@
     "raspberry-pi-pico.cmakeAutoConfigure": false,
     "raspberry-pi-pico.useCmakeTools": true,
     "raspberry-pi-pico.cmakePath": "cmake",
-    "raspberry-pi-pico.ninjaPath": "ninja"
+    "raspberry-pi-pico.ninjaPath": "ninja",
+    "files.associations": {
+        "stdlib.h": "c",
+        "stdio.h": "c",
+        "adc.h": "c",
+        "sensors.h": "c",
+        "resets.h": "c",
+        "cyw43_arch.h": "c"
+    }
 }
