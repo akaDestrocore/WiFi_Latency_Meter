@@ -42,6 +42,13 @@
         "adc.h": "c",
         "sensors.h": "c",
         "resets.h": "c",
-        "cyw43_arch.h": "c"
+        "cyw43_arch.h": "c",
+        "ip4_addr.h": "c",
+        "ping.h": "c",
+        "raw.h": "c",
+        "stdbool.h": "c",
+        "cstring": "c",
+        "variant": "c",
+        "functional": "c"
     }
 }

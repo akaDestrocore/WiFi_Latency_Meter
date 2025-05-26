@@ -9,7 +9,9 @@
 // Number of ADC samples to average for temperature reading
 #define TEMP_SAMPLE_COUNT 512
 
-// function prototypes for ADC initialization and temperature reading
+/**
+ *  @brief function prototypes for ADC initialization and temperature reading
+ */
 void temperature_init(void);
 float temperature_read_celsius(void);
 
