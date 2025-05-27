@@ -38,6 +38,7 @@ pico_sdk_init()
 add_executable(WiFi_Latency_Meter 
         src/main.c
         src/sensors.c
+        src/ping.c
 )
 
 pico_set_program_name(WiFi_Latency_Meter "WiFi_Latency_Meter")
