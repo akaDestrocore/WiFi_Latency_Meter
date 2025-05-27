@@ -49,6 +49,8 @@
         "stdbool.h": "c",
         "cstring": "c",
         "variant": "c",
-        "functional": "c"
+        "functional": "c",
+        "ip_addr.h": "c",
+        "format": "c"
     }
 }
