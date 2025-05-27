@@ -52,5 +52,6 @@
         "functional": "c",
         "ip_addr.h": "c",
         "format": "c"
-    }
+    },
+    "C_Cpp.default.compilerPath": "/opt/st/stm32cubeclt_1.18.0/GNU-tools-for-STM32/bin/arm-none-eabi-gcc"
 }
