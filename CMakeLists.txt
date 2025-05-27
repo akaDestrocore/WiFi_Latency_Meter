@@ -40,6 +40,7 @@ add_executable(WiFi_Latency_Meter
         src/sensors.c
         src/ping.c
         src/wifi.c
+        src/influxdb.c
 )
 
 pico_set_program_name(WiFi_Latency_Meter "WiFi_Latency_Meter")

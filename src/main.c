@@ -5,6 +5,7 @@
 #include "sensors.h"
 #include "ping.h"
 #include "wifi.h"
+#include "influxdb.h"
 
 
 /**
@@ -30,6 +31,9 @@ int main()
 		}
 	}
 	
+	uint32_t retry_c = 0;
+    uint32_t retry_delay = INITIAL_RETRY_DELAY_MS;
+
     while (true) {
 
 		Ping_Handle_t ping_handle;
@@ -47,8 +51,31 @@ int main()
 
 			DBG("Packets: sent=%u, received=%u, loss=%u%%\r\n", ping_handle.sent, ping_handle.received, loss_p);
 			DBG("Avg RTT: %llu us, Min RTT: %llu us, Max RTT: %llu us, Jitter: %llu us\r\n", avg_rtt_us, min_rtt_us, max_rtt_us, jitter_us);
+
+
+			// Send measurements to InfluxDB
+			if (influxdb_send_measurements(avg_rtt_us, min_rtt_us, max_rtt_us, jitter_us, loss_p, temperature)) {
+				DBG("Data sent to InfluxDB");
+				retry_c = 0;
+				retry_delay = INITIAL_RETRY_DELAY_MS;
+			} else {
+				DBG("Failed to send data to InfluxDB");
+                retry_delay = calculate_backoff_delay(&retry_c, &retry_delay);
+			}
+		} else {
+			// Ping measurement failed
+			DBG("Ping measurement failed");
+
+			// Send temeprature and packet loss to InfluxDB
+			if (influxdb_send_failure(temperature)) {
+                retry_c = 0;
+                retry_delay = INITIAL_RETRY_DELAY_MS;
+            } else {
+                DBG("Failed to send failure report to InfluxDB");
+                retry_delay = calculate_backoff_delay(&retry_c, &retry_delay);
+            }
 		}
 
-		sleep_ms(2000); 
+		sleep_ms(MEASUREMENT_INTERVAL_MS); 
     }
 }
