@@ -17,28 +17,31 @@ static void send_ping(const ip4_addr_t *dest, uint16_t seq);
  * @return true on success, false otherwise
  */
 bool ping_measure(Ping_Handle_t *ping_handle, const char *ip_addr) {
-    if ((NULL == ping_handle) ||(NULL == ip_addr)) {
+    if (NULL == ping_handle || NULL == ip_addr) {
         DBG("Invalid parameters\n");
         return false;
     }
 
-    ip4_addr_t target_ip;
-    uint8_t dot_c = 0;
-    while (*ip_addr) {
-        if (*ip_addr == '.') {
+    // Validate IP
+    const char *scan = ip_addr;
+    int dot_c = 0;
+    while (*scan) {
+        if (*scan == '.') {
             dot_c++;
-        } else if (*ip_addr < '0' || *ip_addr > '9') {
-            DBG("Invalid IP address format\n");
-            break;
+        } else if (*scan < '0' || *scan > '9') {
+            DBG("Invalid IP address format: %s\n", ip_addr);
+            return false;
         }
-        ip_addr++;
+        scan++;
     }
-    if (dot_c == 3 && *ip_addr == '\0') {
-        target_ip.addr = ipaddr_addr(ip_addr);
-    } else {
+    if (dot_c != 3) {
         DBG("Invalid target IP address format: %s\n", ip_addr);
         return false;
     }
+
+    // Convert str to ip4_addr_t
+    ip4_addr_t target_ip;
+    target_ip.addr = ipaddr_addr(ip_addr);
 
     ping_pcb = raw_new(IP_PROTO_ICMP);
     if (NULL == ping_pcb) {
@@ -63,16 +66,17 @@ bool ping_measure(Ping_Handle_t *ping_handle, const char *ip_addr) {
         }
 
         if( true == ping_done) {
-            ping_handle->rtt_us[ping_handle->received] = ping_rtt_us;
-            DBG("Ping %d: %llu us", i, ping_rtt_us);
+            ping_handle->rtt_us[ping_handle->received++] = ping_rtt_us;
+            DBG("Ping %d: %llu us\n", i, ping_rtt_us);
         } else {
-            DBG("Ping %d: timeout", i);
+            DBG("Ping %d: timeout\n", i);
         }
     }
 
     raw_remove(ping_pcb);
     return ping_handle->received > 0 ? true : false;
 }
+
 
 /**
  * @brief ICMP receive callback
@@ -101,6 +105,8 @@ static uint8_t ping_recv_callback(void *arg, struct raw_pcb *pcb, struct pbuf *p
     if (icmp_hdr->type == ICMP_ER && lwip_ntohs(icmp_hdr->id) == 0xBADA && checksum_recv == checksum_calc) {
         uint64_t now_us = time_us_64();
         uint64_t timestamp = ntohl(icmp_hdr->timestamp);
+        // Convert to microseconds
+        timestamp *= 1000; 
         ping_rtt_us = now_us - timestamp;
         ping_done = true;
     } else {
@@ -140,4 +146,55 @@ static void send_ping(const ip4_addr_t *dest, uint16_t seq) {
     // Send the ICMP echo request
     raw_sendto(ping_pcb, p, (const ip_addr_t*)dest);
     pbuf_free(p);
+}
+
+/**
+ * @brief Calculate ping statistics from ping handle
+ * @param[in] ping Pointer to a ping handle structure with measurement results
+ * @param[out] avg_rtt_us Average round trip time in microseconds
+ * @param[out] min_rtt_us Minimum round trip time in microseconds
+ * @param[out] max_rtt_us Maximum round trip time in microseconds
+ * @param[out] jitt_us Jitter in microseconds
+ * @param[out] loss_p Packet loss percentage
+ * @return true on success, false otherwise
+ */
+bool ping_calculate_stats(Ping_Handle_t *ping_handle, uint64_t *avg_rtt_us, 
+                                uint64_t *min_rtt_us, uint64_t *max_rtt_us, 
+                                uint64_t *jitt_us, uint8_t *loss_p) {
+    if (NULL == ping_handle || NULL == avg_rtt_us || NULL == min_rtt_us ||
+        NULL == max_rtt_us || NULL == jitt_us || NULL == loss_p) {
+        DBG("Invalid parameters\n");
+        return false;
+    }
+
+    if (0 == ping_handle->received) {
+        // Everything is lost
+        *loss_p = 100;
+        return false;
+    }
+
+    // Calculate average RTT
+    uint64_t total_rtt_us = 0;
+    // Min will be overwritten each time we get a smaller min RTT value
+    *min_rtt_us = UINT64_MAX;
+    // Will be overwritten each time we get a larger max RTT value
+    *max_rtt_us = 0;
+
+    for (int i = 0; i < ping_handle->received; i++) {
+        total_rtt_us += ping_handle->rtt_us[i];
+        
+        if (ping_handle->rtt_us[i] < *min_rtt_us) {
+            *min_rtt_us = ping_handle->rtt_us[i];
+        }
+
+        if (ping_handle->rtt_us[i] > *max_rtt_us) {
+            *max_rtt_us = ping_handle->rtt_us[i];
+        }
+    }
+
+    *avg_rtt_us = total_rtt_us / ping_handle->received;
+    *loss_p = (ping_handle->sent - ping_handle->received) / ping_handle->sent * 100;
+    *jitt_us = *max_rtt_us - *min_rtt_us;
+
+    return true;
 }

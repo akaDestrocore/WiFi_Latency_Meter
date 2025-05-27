@@ -11,8 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-
-#define MAX_PING_COUNT       5
+#include "config.h"
 
 typedef struct __attribute__((packed)) {
     uint8_t type;        // ICMP type
