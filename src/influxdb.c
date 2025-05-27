@@ -208,3 +208,49 @@ static err_t tcp_connected_callback(void *arg, struct tcp_pcb *tpcb, err_t err) 
     tcp_output(tpcb);
     return ERR_OK;
 }
+
+/**
+ * @brief Send a packet with no successful pings to InfluxDB
+ * @param[in] temperature_c Temperature in Celsius
+ * @return true on success, false otherwise
+ */
+bool influxdb_send_failure(float temperature_c) {
+    char influx_query[128];
+
+    snprintf(influx_query, sizeof(influx_query), "net_metrics,host=picow "
+        "loss=100,"
+        "temp=%.2f",
+        temperature_c);
+
+    // Send the HTTP POST request to InfluxDB
+    DBG("Sending failure query anyway: %s\n", influx_query);
+    bool request_res = send_http_post(influx_query);
+    return request_res;
+}
+
+/**
+ * @brief Calculate delay for retrying failed operations
+ * @param retry_count Pointer to retry counter
+ * @param retry_delay Pointer to current retry delay
+ * @note Retry counter will be incremented
+ * @return Delay time in ms
+ */
+uint32_t calculate_backoff_delay(uint32_t *retry_c, uint32_t *retry_delay) {
+    (*retry_c)++;
+
+    if (*retry_c > MAX_RETRY_COUNT) {
+        DBG("Max retries reached (%d). Resetting counter", MAX_RETRY_COUNT);
+        *retry_c = 0;
+        *retry_delay = INITIAL_RETRY_DELAY_MS;
+        return MEASUREMENT_INTERVAL_MS;
+    }
+
+    // Exponential delay with a limitation
+    uint32_t delay = INITIAL_RETRY_DELAY_MS * (1 << (*retry_c - 1));
+    uint32_t max_delay = MEASUREMENT_INTERVAL_MS * 4;
+    
+    *retry_delay = (delay > max_delay) ? max_delay : delay;
+    DBG("Backoff delay: %lu ms (retry %lu/%d)", *retry_delay, *retry_c, MAX_RETRY_COUNT);
+    
+    return *retry_delay;
+}

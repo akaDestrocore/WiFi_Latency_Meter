@@ -28,6 +28,6 @@ bool influxdb_send_measurements(uint64_t rtt_avg_us, uint64_t rtt_min_us, uint64
 // Separate function to send failed measurement attempt results
 bool influxdb_send_failure(float temperature_c);
 // Backoff delay calculation
-uint32_t calculate_backoff_delay(uint32_t *retry_count, uint32_t *retry_delay);
+uint32_t calculate_backoff_delay(uint32_t *retry_c, uint32_t *retry_delay);
 
 #endif /* INFLUXDB_H */
