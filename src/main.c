@@ -4,6 +4,7 @@
 #include "pico/cyw43_arch.h"
 #include "sensors.h"
 #include "ping.h"
+#include "wifi.h"
 
 
 /**
@@ -20,15 +21,23 @@ int main()
 
     // Initialize ADC to measure temperature
     temperature_init();
+
+	// Initialize Wi-Fi
+	if (!wifi_init()) {
+		printf("Wi-Fi initialization failed!\r\n");
+		while (true) {
+			tight_loop_contents();
+		}
+	}
 	
     while (true) {
 
 		Ping_Handle_t ping_handle;
 		bool ping_success = ping_measure(&ping_handle, ROUTER_IP_ADDR);
 
-		/* Read temperature */
+		// Read temperature
 		float temperature = temperature_read_celsius();
-		printf("Temperature: %.2f°C\r\n", temperature);
+		printf("\r\nTemperature: %.2f°C\r\n", temperature);
 
 		if(true == ping_success && ping_handle.received > 0) {
 			uint64_t avg_rtt_us, min_rtt_us, max_rtt_us, jitter_us;

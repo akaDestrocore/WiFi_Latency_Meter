@@ -2,7 +2,9 @@
 #define CONFIG_H
 
 // Network configuration
-#define ROUTER_IP_ADDR    "192.168.2.1"
+#define ROUTER_IP_ADDR      "192.168.2.1"
+#define WIFI_SSID           "SomeSSID"
+#define WIFI_PASSWORD       "SomePassword"
 
 // Measurememnt configuration
 #define PING_TIMEOUT_MS     2000
