@@ -32,7 +32,7 @@ bool influxdb_send_measurements(uint64_t rtt_avg_us, uint64_t rtt_min_us, uint64
         "rtt_max=%llu,"
         "jitter=%llu,"
         "loss=%u,"
-        "temp=%.2f",
+        "temperature=%.2f",
         (uint64_t)rtt_avg_us,
         (uint64_t)rtt_min_us,
         (uint64_t)rtt_max_us,
@@ -217,9 +217,9 @@ static err_t tcp_connected_callback(void *arg, struct tcp_pcb *tpcb, err_t err) 
 bool influxdb_send_failure(float temperature_c) {
     char influx_query[128];
 
-    snprintf(influx_query, sizeof(influx_query), "net_metrics,host=picow "
+    snprintf(influx_query, sizeof(influx_query), "wifi_measurements,host=PicoW "
         "loss=100,"
-        "temp=%.2f",
+        "temperature=%.2f",
         temperature_c);
 
     // Send the HTTP POST request to InfluxDB
