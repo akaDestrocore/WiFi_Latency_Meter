@@ -18,6 +18,9 @@ bool wifi_init(void) {
         return false;
     }
 
+    // Disable Wi-Fi power management
+    cyw43_wifi_pm(&cyw43_state, CYW43_PERFORMANCE_PM & ~0xf);
+
     // Set station mode
     cyw43_arch_enable_sta_mode();
 
@@ -39,8 +42,12 @@ bool wifi_init(void) {
  * @brief Check if Wi-Fi is connected
  * @return true if connected, false otherwise
  */
-bool is_wifi_connected(void) {
-    return wifi_connected;
+bool wifi_is_connected(void) {
+    bool connected = false;
+    cyw43_arch_lwip_begin();
+    connected = wifi_connected;
+    cyw43_arch_lwip_end();
+    return connected;
 }
 
 /**

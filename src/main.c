@@ -9,7 +9,7 @@
 #include "wifi.h"
 #include "influxdb.h"
 
-#define MAX_WIFI_REINIT_TRIES    15
+#define MAX_WIFI_REINIT_TRIES    100
 
 /**
  * @brief  The application entry point.
@@ -71,10 +71,10 @@ int main()
         }
 
         // Check if Wi-Fi is still working
-        struct netif *wifi_if = netif_default;
-        if (!netif_is_up(wifi_if) || !netif_is_link_up(wifi_if)) {
+         if (!wifi_is_connected()) {
             printf("Wi-Fi link down! Reinitializing…\r\n");
-            cyw43_arch_deinit();
+             wifi_deinit();
+            
 
             bool reinit_ok = false;
             uint32_t backoff = INITIAL_RETRY_DELAY_MS;
@@ -94,6 +94,7 @@ int main()
             }
         }
 
+        wifi_process();
         sleep_ms(MEASUREMENT_INTERVAL_MS);
     }
     return 0;

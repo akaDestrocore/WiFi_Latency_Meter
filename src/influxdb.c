@@ -4,12 +4,14 @@
 static HTTP_Handle_t http_handle;
 static uint32_t retry_c = 0;
 static uint32_t retry_delay = INFLUX_RETRY_DELAY_MS;
+static volatile uint32_t pending_sent = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 static bool send_http_post(const char *query);
 static void tcp_error_callback(void *arg, err_t err);
 static err_t tcp_recv_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 static err_t tcp_connected_callback(void *arg, struct tcp_pcb *tpcb, err_t err);
+static err_t tcp_sent_callback(void *arg, struct tcp_pcb *tpcb, u16_t len);
 
 /**
  * @brief Send Wi-Fi measurement results to InfluxDB
@@ -78,7 +80,9 @@ static bool send_http_post(const char *data) {
 
     influxdb_ip.addr = ipaddr_addr(INFLUXDB_IP);
 
+    cyw43_arch_lwip_begin();
     http_handle.pcb = tcp_new();
+    cyw43_arch_lwip_end();
     if(!http_handle.pcb){
         DBG("Failed to create TCP control block\n");
         return false;
@@ -105,12 +109,24 @@ static bool send_http_post(const char *data) {
         strlen(data),
         data);
 
+    // Set all callbacks
+    cyw43_arch_lwip_begin();
+    tcp_arg(http_handle.pcb, NULL);
+    tcp_err(http_handle.pcb, tcp_error_callback);
+    tcp_recv(http_handle.pcb, tcp_recv_callback);
+    tcp_sent(http_handle.pcb, tcp_sent_callback);
+    cyw43_arch_lwip_end();
+    
     // Connect to InfluxDB server
+    cyw43_arch_lwip_begin();
     err_t err = tcp_connect(http_handle.pcb, &influxdb_ip, INFLUXDB_PORT, tcp_connected_callback);
+    cyw43_arch_lwip_end();
 
     if (err != ERR_OK) {
         DBG("TCP connect error: %d", err);
+        cyw43_arch_lwip_begin();
         tcp_close(http_handle.pcb);
+        cyw43_arch_lwip_end();
         return false;
     }
 
@@ -127,7 +143,9 @@ static bool send_http_post(const char *data) {
 
     if (!http_handle.complete) {
         DBG("HTTP request timed out");
+        cyw43_arch_lwip_begin();
         tcp_close(http_handle.pcb);
+        cyw43_arch_lwip_end();
         return false;
     }
 
@@ -169,7 +187,7 @@ static err_t tcp_recv_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, 
 
     if (response[9] == '2' && response[10] == '0' && response[11] == '4') {
         http_handle.success = true;
-        DBG("InfluxDB response: 204 No Content (success)");
+        DBG("InfluxDB: 204 Success");
     } else {
          DBG("InfluxDB bad response: %s", response);
     }
@@ -196,16 +214,46 @@ static err_t tcp_connected_callback(void *arg, struct tcp_pcb *tpcb, err_t err) 
         return err;
     }
 
+    // Wait for buffer space
+    uint32_t retry_count = 0;
+    while (pending_sent + http_handle.request_len > tcp_sndbuf(tpcb)) {
+        if (++retry_count > 100) {
+            DBG("TCP send buffer full, timeout\n");
+            http_handle.complete = true;
+            http_handle.success = false;
+            tcp_close(tpcb);
+            return ERR_MEM;
+        }
+        sleep_ms(10);
+    }
+
     // Send HTTP request
     err_t write_err = tcp_write(tpcb, http_handle.request, http_handle.request_len, TCP_WRITE_FLAG_COPY);
 
     if (write_err != ERR_OK) {
         DBG("TCP write error: %d\n", write_err);
         http_handle.complete = true;
+        http_handle.success = false;
+        tcp_close(tpcb);
         return write_err;
     }
 
+    // Track unacknowledged data
+    pending_sent += http_handle.request_len;
     tcp_output(tpcb);
+    return ERR_OK;
+}
+
+/**
+ * @brief TCP sent callback function
+ * @param[in] arg Unused argument (needed by LWIP API)
+ * @param[in] pcb TCP protocol control block
+ * @param[in] len Number of bytes sent
+ * @return ERR_OK on success
+ */
+static err_t tcp_sent_callback(void *arg, struct tcp_pcb *pcb, u16_t len) {
+    if (pending_sent >= len) pending_sent -= len;
+    else pending_sent = 0;
     return ERR_OK;
 }
 

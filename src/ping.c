@@ -43,14 +43,18 @@ bool ping_measure(Ping_Handle_t *ping_handle, const char *ip_addr) {
     ip4_addr_t target_ip;
     target_ip.addr = ipaddr_addr(ip_addr);
 
+    cyw43_arch_lwip_begin();
     ping_pcb = raw_new(IP_PROTO_ICMP);
+    cyw43_arch_lwip_end();
     if (NULL == ping_pcb) {
         DBG("Failed to create raw protocol control block\n");
         return false;
     }
 
+    cyw43_arch_lwip_begin();
     raw_bind(ping_pcb, IP_ADDR_ANY);
     raw_recv(ping_pcb, ping_recv_callback, ping_handle);
+    cyw43_arch_lwip_end();
 
     ping_handle->sent = MAX_PING_COUNT;
     ping_handle->received = 0;
@@ -73,7 +77,9 @@ bool ping_measure(Ping_Handle_t *ping_handle, const char *ip_addr) {
         }
     }
 
+    cyw43_arch_lwip_begin();
     raw_remove(ping_pcb);
+    cyw43_arch_lwip_end();
     return ping_handle->received > 0 ? true : false;
 }
 
@@ -144,7 +150,9 @@ static void send_ping(const ip4_addr_t *dest, uint16_t seq) {
     // Copy the ICMP header into the pbuf
     memcpy(p->payload, &icmp_hdr, sizeof(ICMP_EchoHeader_t));
     // Send the ICMP echo request
+    cyw43_arch_lwip_begin();
     raw_sendto(ping_pcb, p, (const ip_addr_t*)dest);
+    cyw43_arch_lwip_end();
     pbuf_free(p);
 }
 
